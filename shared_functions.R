@@ -700,3 +700,83 @@ save_BS_occs_df_as_table_and_bedgraph <- function(df, min_cov = 20, file_name, o
   return(NULL)
 }
 
+
+calc_NP_occs_df <- function(site_stats) {
+  occ_df <- site_stats[, c("ref_seq", "position", "start", "end", "hit_call_fraction_methylated", "hits_called")]
+  colnames(occ_df) <- c("chr", "pos", "start", "end", "occ", "counts")
+  occ_df$occ <- 1 - occ_df$occ
+  occ_df$chr <- sub("^chr0", "chr", occ_df$chr)
+  occ_df$end <- occ_df$end + 1  # Nanopolish marks the C in CG, but also counts the methylations at the C of the - strand
+  occ_df$pos <- floor((occ_df$start + occ_df$end)/2)
+  footprint <- occ_df$end - occ_df$start + 1
+  small_sites <- footprint < 10
+  extension <- ceiling((10 - footprint[small_sites]) / 2)  # increase footprint of small_sites symmetrically to 10bp or 11bp
+  occ_df$start[small_sites] <- pmax(1, occ_df$start[small_sites] - extension)
+  occ_df$end[small_sites] <- occ_df$end[small_sites] + extension
+  return(occ_df)
+}
+
+
+load_NP_data <- function(project_folder, samples, sample_add= "") {
+  site_stats_combined <- load_barcoded_site_stats("methylation/site_stats_q30.tsv", "barcodes.tsv", project_folder = project_folder)
+  site_stats_chr <- subset(site_stats_combined, grepl("^chr[0-1][0-9]$", ref_seq))
+  rm(site_stats_combined)
+  site_stats_chr$ref_seq <- as.character(site_stats_chr$ref_seq)
+  if(!missing(samples)) {
+    site_stats_chr <- subset(site_stats_chr, sample %in% samples)
+  }
+  site_stats_chr$sample <- paste0(sample_add, as.character(site_stats_chr$sample))
+  
+  return(lapply(split(site_stats_chr, site_stats_chr$sample), calc_NP_occs_df))
+}
+
+
+calc_average_map <- function(df_list, min_cov = 20, pos_binning = NA) {
+  
+  # RE samples need to be filtered with min coverage 40 already
+  # BS samples will be filtered with min coverage 20
+  
+  # Averaging: - all samples are treated equally: calculate mean and sd over samples for every site
+  #            - if positions are to be binned, first calculate the binned average of each sample, then average over samples
+  
+  df_list <- lapply(df_list, function(df) {
+    if("counts" %in% colnames(df)) df <- df[df$counts >= min_cov & is.finite(df$occ), ]
+    else df <- df[is.finite(df$occ), ]
+    if(is.finite(pos_binning)) {
+      df$pos <- round(df$pos/pos_binning)*pos_binning
+      df$chr_pos <- paste0(df$chr, "_", df$pos)
+      df <- aggregate(df[, "occ"], list(df$chr_pos), mean)
+      colnames(df) <- c("chr_pos", "occ")
+      temp <- strsplit(df$chr_pos, split = "_")
+      df$chr <- sapply(temp, "[[", 1)
+      df$pos <- as.numeric(sapply(temp, "[[", 2))
+    } else {
+      df$chr_pos <- paste0(df$chr, "_", df$pos)
+    }
+    return(df[, c("chr", "pos", "occ", "chr_pos")])
+  })
+  df <- bind_rows(df_list)
+  df$occ[df$occ > 1] <- 1
+  df$occ[df$occ < 0] <- 0
+  
+  map_df_mean <- aggregate(df[, "occ"], list(df$chr_pos), mean)
+  colnames(map_df_mean) <- c("chr_pos", "occ")
+  
+  map_df_sd <- aggregate(df[, "occ"], list(df$chr_pos), sd)
+  colnames(map_df_sd) <- c("chr_pos", "sd_occ")
+  
+  map_df_num <- aggregate(rep(1, nrow(df)), list(df$chr_pos), sum)
+  colnames(map_df_num) <- c("chr_pos", "num_samples")
+  
+  map_df <- merge(map_df_mean, map_df_sd)
+  map_df <- merge(map_df, map_df_num)
+  
+  temp <- strsplit(map_df$chr_pos, split = "_")
+  map_df$chr <- sapply(temp, "[[", 1)
+  map_df$pos <- as.numeric(sapply(temp, "[[", 2))
+  map_df$chr_pos <- NULL
+  map_df <- map_df[order(map_df$chr, map_df$pos), ]
+  return(map_df)
+}
+
+
