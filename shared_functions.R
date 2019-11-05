@@ -665,11 +665,38 @@ plot_sorted_genes <- function(genes_df, sorted_genes_df, list_name, map_name, pl
 }
 
 
-export_BS_occs_df_to_bedgraph <- function(df, file_path, sample_name)
+save_RE_occs_df_as_table_and_bedgraph <- function(df, file_name, output_path = getwd()) {
+  
+  df[, c("eff_coverage", "eff_cuts", "occ_cut_uncut_not_corrected", "occ_cut_all_cut", "occ_cut_uncut_corrected")] <- round(df[, c("eff_coverage", "eff_cuts", "occ_cut_uncut_not_corrected", "occ_cut_all_cut", "occ_cut_uncut_corrected")], digits = 4)
+  
+  write.table(x = df, file = paste0(output_path, file_name, ".tsv"), sep = "\t", row.names = FALSE, quote = FALSE)
+  
+  df_2 <- data.frame(seqnames = paste0("chr", as.roman(gsub("chr", "", df$chr))), start=df$pos, end=df$pos, score = round(df$occ_cut_uncut_corrected*100, digits = 2))
+  
+  df_2$score[df_2$score > 100] <- 100  # for RE samples, BS samples are always between 0 and 100%
+  df_2$score[df_2$score < 0] <- 0
+  
+  gr <- as(df_2, "GRanges")
+  export.bedGraph(gr, paste0(output_path, file_name, ".bedgraph"))
+  
+  return(NULL)
+}
 
-  df_2 <- data.frame(seqnames = paste0("chr", as.roman(gsub("chr","" ,df$chr))), start=df$pos, end=df$pos, strand = df$strand, score = round(df$occ*100, digits = 2), name = df$pattern, counts = df$counts, converted = df$converted)
-  gr <- as(df2, "GRanges")
-  export.bedGraph(gr, paste0(file_path, "occupancy_map_", sample_name, ".bedgraph"))
 
+save_BS_occs_df_as_table_and_bedgraph <- function(df, min_cov = 20, file_name, output_path = getwd()) {
+  if("counts" %in% colnames(df)) {  # for BS samples
+    df <- df[df$counts >= min_cov & is.finite(df$occ), ]
+  } else {
+    df <- df[is.finite(df$occ), ]
+  }
+  
+  write.table(x = df, file = paste0(output_path, file_name, ".tsv"), sep = "\t", row.names = FALSE, quote = FALSE)
+  
+  df_2 <- data.frame(seqnames = paste0("chr", as.roman(gsub("chr","" ,df$chr))), start=df$pos, end=df$pos, strand = df$strand, score = round(df$occ*100, digits = 2))
+  
+  gr <- as(df_2, "GRanges")
+  export.bedGraph(gr, paste0(output_path, file_name, ".bedgraph"))
+  
+  return(NULL)
 }
 
