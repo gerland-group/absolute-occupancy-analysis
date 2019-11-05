@@ -1,0 +1,2 @@
+"recognition_site"	"site_shift"	"middle_shift"
+"AluI"	"AAGCTT"	0	3

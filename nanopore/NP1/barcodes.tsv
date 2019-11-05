@@ -1,0 +1,3 @@
+"barcode"	"sample"	"reference_genome"	"spike_in"	"methylation_time"	"methylation_unit"	"methylation_type"	"pool_chr"	"pool_spike_in"	"pool_chr_HD"
+"barcode01"	"WTX_Ymin"	"S288C_REL606_pFMP233_whole"	"601_25mer"	15		"CpG"	"no_XL"	"Ymin"	"non_HD"
+"barcode02"	"WTX_XL_Ymin"	"S288C_REL606_pFMP233_whole"	"601_25mer"	15		"CpG"	"XL"	"Ymin"	"non_HD"

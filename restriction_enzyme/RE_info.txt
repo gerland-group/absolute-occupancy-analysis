@@ -1,0 +1,12 @@
+"recognition_site"	"site_shift"	"middle_shift"	"window_start"	"window_end"
+"BamHI"	"GGATCC"	2	3	0	20
+"HindIII"	"AAGCTT"	2	3	0	20
+"AluI"	"AGCT"	0	2	0	20
+"HhaI"	"GCGC"	-1	2	0	10	
+"ClaI"	"ATCGAT"	1	3	NA	NA	
+"EcoRI"	"GAATTC"	2	3	0	20
+"EcoRV"	"GATATC"	0	3	NA	NA
+"XbaI"	"TCTAGA"	2	3	0	20
+"AsiSI"	"GCGATCGC"	-1	4	0	0
+"KpnI"	"GGTACC"	-2	3	0	10
+"HpaI"	"GTTAAC"	0	3	0	40
