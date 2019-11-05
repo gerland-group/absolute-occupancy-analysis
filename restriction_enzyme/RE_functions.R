@@ -1388,6 +1388,21 @@ calc_occs_df_list <- function(accs_df_list, min_coverage) {
 }
 
 
+
+calc_occs_df_list_with_not_corrected_version <- function(accs_df_list, min_coverage = 40) {
+  occs_df_list <- list()
+  for(name in names(accs_df_list)) {
+    occs_df <- cbind(accs_df_list[[name]][, c("chr", "enzyme", "pos", "eff_coverage", "eff_cuts")], 1-accs_df_list[[name]][, c("cut_uncut_all_3", "all_mean", "cut_uncut_all_4")])
+    occs_df$chr <- as.character(occs_df$chr)
+    occs_df$enzyme <- as.character(occs_df$enzyme)
+    colnames(occs_df) <- c("chr", "enzyme", "pos", "eff_coverage", "eff_cuts", "occ_cut_uncut_not_corrected", "occ_cut_all_cut", "occ_cut_uncut_corrected")
+    occs_df <- occs_df[with(occs_df, !is.na(eff_coverage) & eff_coverage >= min_coverage), ]
+    occs_df_list[[name]] <- occs_df
+  }
+  return(occs_df_list)
+}
+
+
 plot_accessibility_histograms <- function(accs_df_list, plot_folder, acc_limits = c(-0.5, 2), name_add = "", min_coverage = 0) {
   
   plot_folder = paste0(plot_folder, "accessibility_histograms", name_add, "/")
